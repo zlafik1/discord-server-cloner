@@ -1,13 +1,13 @@
+# render.yaml
+
 services:
   - type: web
-    name: steam-giveaway-bot
+    name: discord-server-cloner
     env: python
     plan: free
-    branch: main
     buildCommand: pip install -r requirements.txt
-    startCommand: python main.py
+    startCommand: python channel_copier.py
     envVars:
-      - key: BOT_TOKEN
-        value: "8389691438:AAGyEfUjmiDFYjmtSRjPtnLCiB-JDZvgPpw"
-      - key: ADMIN_ID
-        value: "7073433113"
+      - key: PYTHON_VERSION
+        value: 3.9.0
+    healthCheckPath: /
