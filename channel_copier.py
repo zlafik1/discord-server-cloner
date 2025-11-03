@@ -39,7 +39,11 @@ class SimpleCloner:
             )
             
             with urllib.request.urlopen(req, context=ssl_context, timeout=30) as response:
-                return response, json.loads(response.read().decode())
+                response_data = response.read().decode()
+                if response_data:
+                    return response, json.loads(response_data)
+                else:
+                    return response, None
         except urllib.error.HTTPError as e:
             print(f"{Fore.RED}❌ HTTP Error {e.code}: {e.reason}")
             return e, None
@@ -112,8 +116,34 @@ class SimpleCloner:
     
     def delete_role(self, server_id, role_id):
         """Удаляем роль"""
-        response, _ = self.make_request('DELETE', f'https://discord.com/api/v9/guilds/{server_id}/roles/{role_id}')
-        return response and response.status == 204
+        try:
+            # Создаем запрос вручную для обработки пустого ответа
+            url = f'https://discord.com/api/v9/guilds/{server_id}/roles/{role_id}'
+            req = urllib.request.Request(
+                url,
+                headers=self.headers,
+                method='DELETE'
+            )
+            
+            with urllib.request.urlopen(req, context=ssl_context, timeout=30) as response:
+                # Для DELETE запросов Discord возвращает 204 No Content (пустой ответ)
+                # Это нормально, не пытаемся парсить JSON
+                if response.status == 204:
+                    return True
+                else:
+                    print(f"{Fore.YELLOW}⚠️  Неожиданный статус код: {response.status}")
+                    return False
+                    
+        except urllib.error.HTTPError as e:
+            if e.code == 429:
+                print(f"{Fore.YELLOW}⚠️  Rate limit, ждем...")
+                time.sleep(2)
+                return self.delete_role(server_id, role_id)
+            print(f"{Fore.RED}❌ HTTP Error {e.code} при удалении роли: {e.reason}")
+            return False
+        except Exception as e:
+            print(f"{Fore.RED}❌ Request Error при удалении роли: {e}")
+            return False
     
     def clone_server(self, source_id, target_id):
         """Клонируем сервер"""
@@ -167,13 +197,17 @@ class SimpleCloner:
         
         # Удаляем старые роли (кроме @everyone)
         print(f"\n{Fore.RED}🗑️  Удаляем старые роли...")
+        roles_deleted = 0
         for role in target_roles:
             if not role['managed'] and role['name'] != '@everyone':
                 if self.delete_role(target_id, role['id']):
                     print(f"{Fore.GREEN}✅ Удалена роль: {role['name']}")
+                    roles_deleted += 1
                 else:
                     print(f"{Fore.RED}❌ Ошибка удаления: {role['name']}")
                 time.sleep(0.5)
+        
+        print(f"{Fore.GREEN}✅ Удалено ролей: {roles_deleted}")
         
         # Создаем новые роли
         print(f"\n{Fore.BLUE}🎨 Создаем новые роли...")
