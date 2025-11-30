@@ -1,4 +1,4 @@
-# Discord Server Cloner V2 🚀
+# Discord Server Cloner V3 🚀
 
 <div align="center">
 
