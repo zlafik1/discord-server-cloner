@@ -1,2 +1,0 @@
-colorama>=0.4.6
-aiohttp>=3.8.5
